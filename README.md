@@ -2,7 +2,7 @@
 
 _A MicroPython port of the [Simple 485 Remastered](https://github.com/Me-Phew/simple485-remastered) library for slave devices._
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GNU%20GPLv3-green.svg)](https://opensource.org/licenses/MIT)
 
 ## Requirements
 This port uses https://github.com/Me-Phew/micropython-logging, which is a fork of https://github.com/erikdelange/MicroPython-Logging.
