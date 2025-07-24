@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 23.07.2025, 16:34, simple485-remastered-micro                 -
+#  Last modified 24.07.2025, 14:46, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
 import time
@@ -221,120 +221,121 @@ class Simple485Remastered:
             raise ValueError("No messages available to read.")
         return self._received_messages.pop(0)
 
+    def _process_byte(self, byte):
+        if self._receiver_state == ReceiverState.IDLE:
+            if byte == ControlSequence.SOH:
+                self._receiver_state = ReceiverState.SOH_RECEIVED
+
+                self._receiving_message = ReceivingMessage(timestamp=get_milliseconds())
+
+        elif self._receiver_state == ReceiverState.SOH_RECEIVED:
+            self._receiving_message.dst_address = byte[0]
+
+            if (
+                self._receiving_message.dst_address != self._address
+                and self._receiving_message.dst_address != BROADCAST_ADDRESS
+            ):
+                self._logger.info("Received message for another address. Ignoring.")
+                self._receiver_state = ReceiverState.IDLE
+                self._receiving_message = None
+            else:
+                self._receiver_state = ReceiverState.DEST_ADDRESS_RECEIVED
+
+        elif self._receiver_state == ReceiverState.DEST_ADDRESS_RECEIVED:
+            self._receiving_message.src_address = byte[0]
+            self._receiver_state = ReceiverState.SRC_ADDRESS_RECEIVED
+
+        elif self._receiver_state == ReceiverState.SRC_ADDRESS_RECEIVED:
+            self._receiving_message.transaction_id = byte[0]
+            self._receiver_state = ReceiverState.TRANSACTION_ID_RECEIVED
+
+        elif self._receiver_state == ReceiverState.TRANSACTION_ID_RECEIVED:
+            self._receiving_message.length = byte[0]
+
+            if not (0 < self._receiving_message.length <= MAX_MESSAGE_LEN):
+                self._logger.warning(f"Received invalid message length of: {self._receiving_message.length}. Dropping.")
+                self._receiver_state = ReceiverState.IDLE
+                self._receiving_message = None
+            else:
+                self._receiver_state = ReceiverState.MESSAGE_LEN_RECEIVED
+
+        elif self._receiver_state == ReceiverState.MESSAGE_LEN_RECEIVED:
+            if byte == ControlSequence.STX:
+                self._receiving_message.crc = (
+                    self._receiving_message.dst_address
+                    ^ self._receiving_message.src_address
+                    ^ self._receiving_message.length
+                )
+                self._receiver_state = ReceiverState.STX_RECEIVED
+            else:
+                self._logger.warning("Expected STX, but got other data. Dropping.")
+                self._receiver_state = ReceiverState.IDLE
+                self._receiving_message = None
+
+        elif self._receiver_state == ReceiverState.STX_RECEIVED:
+            is_valid_encoded_byte = (~(((byte[0] << 4) & 240) | ((byte[0] >> 4) & 15))) & 0xFF == byte[0]
+
+            if is_valid_encoded_byte:
+                if self._receiving_message.is_first_nibble:
+                    self._receiving_message.incoming = byte[0] & 240
+                    self._receiving_message.is_first_nibble = False
+                else:
+                    self._receiving_message.is_first_nibble = True
+                    self._receiving_message.incoming |= byte[0] & 15
+                    self._receiving_message.payload_buffer += bytes([self._receiving_message.incoming])
+                    self._receiving_message.crc ^= self._receiving_message.incoming
+                return
+
+            if byte == ControlSequence.ETX:
+                if len(self._receiving_message.payload_buffer) == self._receiving_message.length:
+                    self._receiver_state = ReceiverState.ETX_RECEIVED
+                else:
+                    self._logger.warning("ETX received but payload length is incorrect. Dropping.")
+                    self._receiver_state = ReceiverState.IDLE
+                    self._receiving_message = None
+                return
+
+            self._logger.warning("Invalid data byte. Dropping.")
+            self._receiver_state = ReceiverState.IDLE
+            self._receiving_message = None
+
+        elif self._receiver_state == ReceiverState.ETX_RECEIVED:
+            if byte[0] == self._receiving_message.crc:
+                self._receiver_state = ReceiverState.CRC_OK
+            else:
+                self._logger.warning("CRC mismatch. Dropping.")
+                self._receiver_state = ReceiverState.IDLE
+                self._receiving_message = None
+
+        elif self._receiver_state == ReceiverState.CRC_OK:
+            if byte == ControlSequence.EOT:
+                message = ReceivedMessage(
+                    src_address=self._receiving_message.src_address,
+                    dest_address=self._receiving_message.dst_address,
+                    transaction_id=self._receiving_message.transaction_id,
+                    length=self._receiving_message.length,
+                    payload=self._receiving_message.payload_buffer,
+                    originating_bus=self,
+                )
+                self._received_messages.append(message)
+                self._logger.info(f"Successfully received message: {message}")
+            else:
+                self._logger.warning("Expected EOT. Dropping packet.")
+
+            self._receiver_state = ReceiverState.IDLE
+            self._receiving_message = None
+
     def _receive(self):
         while self._interface.any() > 0:
             byte = self._interface.read(1)
 
-            if byte == ControlSequence.NULL and self._receiver_state == ReceiverState.IDLE:
+            if byte is None or (byte == ControlSequence.NULL and self._receiver_state == ReceiverState.IDLE):
                 continue
 
             self._last_bus_activity = get_milliseconds()
             self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state.name}")
 
-            if self._receiver_state == ReceiverState.IDLE:
-                if byte == ControlSequence.SOH:
-                    self._receiver_state = ReceiverState.SOH_RECEIVED
-
-                    self._receiving_message = ReceivingMessage(timestamp=get_milliseconds())
-
-            elif self._receiver_state == ReceiverState.SOH_RECEIVED:
-                self._receiving_message.dst_address = byte[0]
-
-                if (
-                    self._receiving_message.dst_address != self._address
-                    and self._receiving_message.dst_address != BROADCAST_ADDRESS
-                ):
-                    self._logger.info("Received message for another address. Ignoring.")
-                    self._receiver_state = ReceiverState.IDLE
-                    self._receiving_message = None
-                else:
-                    self._receiver_state = ReceiverState.DEST_ADDRESS_RECEIVED
-
-            elif self._receiver_state == ReceiverState.DEST_ADDRESS_RECEIVED:
-                self._receiving_message.src_address = byte[0]
-                self._receiver_state = ReceiverState.SRC_ADDRESS_RECEIVED
-
-            elif self._receiver_state == ReceiverState.SRC_ADDRESS_RECEIVED:
-                self._receiving_message.transaction_id = byte[0]
-                self._receiver_state = ReceiverState.TRANSACTION_ID_RECEIVED
-
-            elif self._receiver_state == ReceiverState.TRANSACTION_ID_RECEIVED:
-                self._receiving_message.length = byte[0]
-
-                if not (0 < self._receiving_message.length <= MAX_MESSAGE_LEN):
-                    self._logger.warning(
-                        f"Received invalid message length of: {self._receiving_message.length}. Dropping."
-                    )
-                    self._receiver_state = ReceiverState.IDLE
-                    self._receiving_message = None
-                else:
-                    self._receiver_state = ReceiverState.MESSAGE_LEN_RECEIVED
-
-            elif self._receiver_state == ReceiverState.MESSAGE_LEN_RECEIVED:
-                if byte == ControlSequence.STX:
-                    self._receiving_message.crc = (
-                        self._receiving_message.dst_address
-                        ^ self._receiving_message.src_address
-                        ^ self._receiving_message.length
-                    )
-                    self._receiver_state = ReceiverState.STX_RECEIVED
-                else:
-                    self._logger.warning("Expected STX, but got other data. Dropping.")
-                    self._receiver_state = ReceiverState.IDLE
-                    self._receiving_message = None
-
-            elif self._receiver_state == ReceiverState.STX_RECEIVED:
-                is_valid_encoded_byte = (~(((byte[0] << 4) & 240) | ((byte[0] >> 4) & 15))) & 0xFF == byte[0]
-
-                if is_valid_encoded_byte:
-                    if self._receiving_message.is_first_nibble:
-                        self._receiving_message.incoming = byte[0] & 240
-                        self._receiving_message.is_first_nibble = False
-                    else:
-                        self._receiving_message.is_first_nibble = True
-                        self._receiving_message.incoming |= byte[0] & 15
-                        self._receiving_message.payload_buffer += bytes([self._receiving_message.incoming])
-                        self._receiving_message.crc ^= self._receiving_message.incoming
-                    continue
-
-                if byte == ControlSequence.ETX:
-                    if len(self._receiving_message.payload_buffer) == self._receiving_message.length:
-                        self._receiver_state = ReceiverState.ETX_RECEIVED
-                    else:
-                        self._logger.warning("ETX received but payload length is incorrect. Dropping.")
-                        self._receiver_state = ReceiverState.IDLE
-                        self._receiving_message = None
-                    continue
-
-                self._logger.warning("Invalid data byte. Dropping.")
-                self._receiver_state = ReceiverState.IDLE
-                self._receiving_message = None
-
-            elif self._receiver_state == ReceiverState.ETX_RECEIVED:
-                if byte[0] == self._receiving_message.crc:
-                    self._receiver_state = ReceiverState.CRC_OK
-                else:
-                    self._logger.warning("CRC mismatch. Dropping.")
-                    self._receiver_state = ReceiverState.IDLE
-                    self._receiving_message = None
-
-            elif self._receiver_state == ReceiverState.CRC_OK:
-                if byte == ControlSequence.EOT:
-                    message = ReceivedMessage(
-                        src_address=self._receiving_message.src_address,
-                        dest_address=self._receiving_message.dst_address,
-                        transaction_id=self._receiving_message.transaction_id,
-                        length=self._receiving_message.length,
-                        payload=self._receiving_message.payload_buffer,
-                        originating_bus=self,
-                    )
-                    self._received_messages.append(message)
-                    self._logger.info(f"Successfully received message: {message}")
-                else:
-                    self._logger.warning("Expected EOT. Dropping packet.")
-
-                self._receiver_state = ReceiverState.IDLE
-                self._receiving_message = None
+            self._process_byte(byte)
 
     def _transmit(self):
         if not self._output_messages:
