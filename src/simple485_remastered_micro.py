@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 24.07.2025, 14:46, simple485-remastered-micro                 -
+#  Last modified 26.07.2025, 23:09, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
 import time
@@ -387,14 +387,16 @@ class Simple485Remastered:
 
 
 class Node:
-    def __init__(self, interface, address, transmit_mode_pin):
-        self._logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, interface, address, transmit_mode_pin, log_level=logging.INFO):
+        self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
         if not is_valid_node_address(address):
             raise ValueError(f"Invalid address for Node: {address}")
 
         self._address = address
-        self._bus = Simple485Remastered(interface=interface, address=address, transmit_mode_pin=transmit_mode_pin)
+        self._bus = Simple485Remastered(
+            interface=interface, address=address, transmit_mode_pin=transmit_mode_pin, log_level=log_level
+        )
 
         self._logger.debug(f"Initialized {self.__class__.__name__} with address {self._address}")
 
@@ -418,14 +420,16 @@ class Node:
 
 
 class Slave(Node):
-    def __init__(self, interface, address, transmit_mode_pin):
+    def __init__(self, interface, address, transmit_mode_pin, log_level=logging.INFO):
         if not is_valid_slave_address(address):
             msg = "Invalid address for Slave: {}. Address must be between {} and {}.".format(
                 address, FIRST_NODE_ADDRESS + 1, LAST_NODE_ADDRESS
             )
             raise ValueError(msg)
 
-        super(Slave, self).__init__(interface=interface, address=address, transmit_mode_pin=transmit_mode_pin)
+        super(Slave, self).__init__(
+            interface=interface, address=address, transmit_mode_pin=transmit_mode_pin, log_level=log_level
+        )
 
     def loop(self):
         self._loop()
