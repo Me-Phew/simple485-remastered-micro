@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 26.07.2025, 23:09, simple485-remastered-micro                 -
+#  Last modified 26.07.2025, 23:16, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
 import time
@@ -84,7 +84,7 @@ class ReceivingMessage:
 
 
 class ReceivedMessage:
-    def __init__(self, src_address, dest_address, transaction_id, length, payload, originating_bus):
+    def __init__(self, *, src_address, dest_address, transaction_id, length, payload, originating_bus):
         self.src_address = src_address
         self.dest_address = dest_address
         self.transaction_id = transaction_id
@@ -117,6 +117,7 @@ class ReceivedMessage:
 class Simple485Remastered:
     def __init__(
         self,
+        *,
         interface,
         address,
         transmit_mode_pin,
@@ -387,7 +388,7 @@ class Simple485Remastered:
 
 
 class Node:
-    def __init__(self, interface, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(self, *, interface, address, transmit_mode_pin, log_level=logging.INFO):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
         if not is_valid_node_address(address):
@@ -420,7 +421,7 @@ class Node:
 
 
 class Slave(Node):
-    def __init__(self, interface, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(self, *, interface, address, transmit_mode_pin, log_level=logging.INFO):
         if not is_valid_slave_address(address):
             msg = "Invalid address for Slave: {}. Address must be between {} and {}.".format(
                 address, FIRST_NODE_ADDRESS + 1, LAST_NODE_ADDRESS
