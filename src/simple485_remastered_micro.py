@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 12:30, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 13:04, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -124,7 +124,7 @@ class Simple485Remastered:
         address,
         transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
         transmit_mode_pin,
-        log_level: int = logging.INFO,
+        log_level = logging.INFO,
     ):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
