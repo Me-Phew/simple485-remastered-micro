@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 26.07.2025, 23:16, simple485-remastered-micro                 -
+#  Last modified 4.08.2025, 12:13, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -22,7 +22,6 @@ import logging
 
 MAX_MESSAGE_LEN = const(255)
 LINE_READY_TIME_MS = const(10)
-TRANSCEIVER_TOGGLE_TIME_US = const(100)
 BITS_PER_BYTE = const(10)
 PACKET_TIMEOUT_MS = const(500)
 FIRST_NODE_ADDRESS = const(0)
@@ -113,6 +112,8 @@ class ReceivedMessage:
 
 # --- Core functionality (see simple485_remastered/core.py) ---
 
+DEFAULT_TRANSCEIVER_TOGGLE_TIME_US = 100
+
 
 class Simple485Remastered:
     def __init__(
@@ -120,6 +121,7 @@ class Simple485Remastered:
         *,
         interface,
         address,
+        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
         transmit_mode_pin,
         log_level: int = logging.INFO,
     ):
@@ -131,6 +133,13 @@ class Simple485Remastered:
             raise ValueError(f"Invalid address: {address}")
 
         self._address = address
+
+        self._transceiver_toggle_time_us = transceiver_toggle_time_us
+        if self._transceiver_toggle_time_us <= 0:
+            raise ValueError(
+                f"Invalid transceiver toggle time: {self._transceiver_toggle_time_us}. "
+                "It must be a positive float representing microseconds."
+            )
 
         self._transmit_mode_pin = machine.Pin(transmit_mode_pin, machine.Pin.OUT)
         self._disable_transmit_mode()
@@ -158,11 +167,11 @@ class Simple485Remastered:
 
     def _enable_transmit_mode(self):
         self._transmit_mode_pin.on()
-        time.sleep_us(TRANSCEIVER_TOGGLE_TIME_US)
+        time.sleep_us(self._transceiver_toggle_time_us)
 
     def _disable_transmit_mode(self):
         self._transmit_mode_pin.off()
-        time.sleep_us(TRANSCEIVER_TOGGLE_TIME_US)
+        time.sleep_us(self._transceiver_toggle_time_us)
 
     def loop(self):
         self._receive()
