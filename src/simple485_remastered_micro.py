@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 12:13, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 12:30, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -120,6 +120,7 @@ class Simple485Remastered:
         self,
         *,
         interface,
+        interface_baudrate,
         address,
         transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
         transmit_mode_pin,
@@ -128,6 +129,7 @@ class Simple485Remastered:
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
         self._interface = interface
+        self._interface_baudrate = interface_baudrate
 
         if not is_valid_node_address(address):
             raise ValueError(f"Invalid address: {address}")
@@ -370,7 +372,7 @@ class Simple485Remastered:
                 safety_margin_factor = 1.2
 
             transmission_time_s = (
-                (len(message_to_send) * BITS_PER_BYTE) / self._interface.baudrate * safety_margin_factor
+                (len(message_to_send) * BITS_PER_BYTE) / self._interface_baudrate * safety_margin_factor
             )
 
             transmit_time_us = transmission_time_s * 1_000_000
@@ -397,7 +399,7 @@ class Simple485Remastered:
 
 
 class Node:
-    def __init__(self, *, interface, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(self, *, interface, interface_baudrate, address, transmit_mode_pin, log_level=logging.INFO):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
         if not is_valid_node_address(address):
@@ -405,7 +407,11 @@ class Node:
 
         self._address = address
         self._bus = Simple485Remastered(
-            interface=interface, address=address, transmit_mode_pin=transmit_mode_pin, log_level=log_level
+            interface=interface,
+            interface_baudrate=interface_baudrate,
+            address=address,
+            transmit_mode_pin=transmit_mode_pin,
+            log_level=log_level,
         )
 
         self._logger.debug(f"Initialized {self.__class__.__name__} with address {self._address}")
@@ -430,7 +436,7 @@ class Node:
 
 
 class Slave(Node):
-    def __init__(self, *, interface, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(self, *, interface, interface_baudrate, address, transmit_mode_pin, log_level=logging.INFO):
         if not is_valid_slave_address(address):
             msg = "Invalid address for Slave: {}. Address must be between {} and {}.".format(
                 address, FIRST_NODE_ADDRESS + 1, LAST_NODE_ADDRESS
@@ -438,7 +444,11 @@ class Slave(Node):
             raise ValueError(msg)
 
         super(Slave, self).__init__(
-            interface=interface, address=address, transmit_mode_pin=transmit_mode_pin, log_level=log_level
+            interface=interface,
+            interface_baudrate=interface_baudrate,
+            address=address,
+            transmit_mode_pin=transmit_mode_pin,
+            log_level=log_level,
         )
 
     def loop(self):
