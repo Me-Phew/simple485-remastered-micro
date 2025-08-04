@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 13:10, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 13:14, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -345,7 +345,7 @@ class Simple485Remastered:
                 continue
 
             self._last_bus_activity = get_milliseconds()
-            self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state.name}")
+            self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state}")
 
             self._process_byte(byte)
 
