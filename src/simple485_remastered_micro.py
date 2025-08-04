@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 13:07, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 13:10, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -399,7 +399,16 @@ class Simple485Remastered:
 
 
 class Node:
-    def __init__(self, *, interface, interface_baudrate, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(
+        self,
+        *,
+        interface,
+        interface_baudrate,
+        address,
+        transmit_mode_pin,
+        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
+        log_level=logging.INFO,
+    ):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
 
         if not is_valid_node_address(address):
@@ -411,6 +420,7 @@ class Node:
             interface_baudrate=interface_baudrate,
             address=address,
             transmit_mode_pin=transmit_mode_pin,
+            transceiver_toggle_time_us=transceiver_toggle_time_us,
             log_level=log_level,
         )
 
@@ -436,7 +446,16 @@ class Node:
 
 
 class Slave(Node):
-    def __init__(self, *, interface, interface_baudrate, address, transmit_mode_pin, log_level=logging.INFO):
+    def __init__(
+        self,
+        *,
+        interface,
+        interface_baudrate,
+        address,
+        transmit_mode_pin,
+        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
+        log_level=logging.INFO,
+    ):
         if not is_valid_slave_address(address):
             msg = "Invalid address for Slave: {}. Address must be between {} and {}.".format(
                 address, FIRST_NODE_ADDRESS + 1, LAST_NODE_ADDRESS
@@ -448,6 +467,7 @@ class Slave(Node):
             interface_baudrate=interface_baudrate,
             address=address,
             transmit_mode_pin=transmit_mode_pin,
+            transceiver_toggle_time_us=transceiver_toggle_time_us,
             log_level=log_level,
         )
 
