@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 13:14, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 13:15, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -381,10 +381,10 @@ class Simple485Remastered:
 
             time.sleep_us(transmit_time_us)
         except OSError as e:
-            self._logger.error(f"Serial communication error: {e}. Message not sent. Will retry later.")
+            self._logger.exception(e, f"Serial communication error: {e}. Message not sent. Will retry later.")
             return False
         except Exception as e:
-            self._logger.error(f"Unexpected error during transmission: {e}. Message not sent. Will retry later.")
+            self._logger.exception(e, f"Unexpected error during transmission: {e}. Message not sent. Will retry later.")
             return False
         finally:
             self._disable_transmit_mode()
@@ -436,7 +436,7 @@ class Node:
 
                 self._handle_incoming_message(message)
             except Exception as e:
-                self._logger.error(f"Error while handling incoming message: {e}")
+                self._logger.exception(e, f"Error while handling incoming message: {e}")
 
     def _handle_incoming_message(self, message, elapsed_ms=None):
         raise NotImplementedError
