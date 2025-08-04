@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 13:27, simple485-remastered-micro                  -
+#  Last modified 4.08.2025, 13:29, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -375,9 +375,9 @@ class Simple485Remastered:
                 (len(message_to_send) * BITS_PER_BYTE) / self._interface.baudrate
             ) * safety_margin_factor
 
-            transmit_time_us = transmission_time_s * 1_000_000
+            transmit_time_us = int(transmission_time_s * 1_000_000)
 
-            self._logger.debug(f"Message transmission time: {transmission_time_s:.2f} seconds")
+            self._logger.debug(f"Message transmission time: {transmission_time_s} seconds")
 
             time.sleep_us(transmit_time_us)
         except OSError as e:
