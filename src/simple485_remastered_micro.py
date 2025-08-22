@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 13:19, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 13:25, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -364,22 +364,29 @@ class Simple485Remastered:
             self._enable_transmit_mode()
             self._interface.write(message_to_send)
 
-            safety_margin_factor = 1.1
-
             try:
-                self._interface.flush()
+                while not self._interface.txdone():
+                    time.sleep_us(10)
             except AttributeError:
-                safety_margin_factor = 1.2
+                self._logger.warning("Interface does not support txdone. Falling back to using flush with manual timing calculation.")
 
-            transmission_time_s = (
-                (len(message_to_send) * BITS_PER_BYTE) / self._interface_baudrate
-            ) * safety_margin_factor
+                safety_margin_factor = 1.1
 
-            transmit_time_us = int(transmission_time_s * 1_000_000)
+                try:
+                    self._interface.flush()
+                except AttributeError:
+                    self._logger.warning("Interface does not support flush. Increasing safety margin factor for manual timing calculation.")
+                    safety_margin_factor = 1.2
 
-            self._logger.debug(f"Message transmission time: {transmission_time_s} seconds")
+                transmission_time_s = (
+                    (len(message_to_send) * BITS_PER_BYTE) / self._interface_baudrate
+                ) * safety_margin_factor
 
-            time.sleep_us(transmit_time_us)
+                transmission_time_us = int(transmission_time_s * 1_000_000)
+
+                self._logger.debug(f"Message transmission time: {transmission_time_s} s ({transmission_time_us} us)")
+
+                time.sleep_us(transmission_time_us)
         except OSError as e:
             self._logger.exception(e, f"Serial communication error: {e}. Message not sent. Will retry later.")
             return False
