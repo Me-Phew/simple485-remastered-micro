@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 12:50, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 13:19, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -372,7 +372,7 @@ class Simple485Remastered:
                 safety_margin_factor = 1.2
 
             transmission_time_s = (
-                (len(message_to_send) * BITS_PER_BYTE) / self._interface.baudrate
+                (len(message_to_send) * BITS_PER_BYTE) / self._interface_baudrate
             ) * safety_margin_factor
 
             transmit_time_us = int(transmission_time_s * 1_000_000)
