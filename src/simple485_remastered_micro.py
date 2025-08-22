@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 4.08.2025, 13:29, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 12:50, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -112,7 +112,7 @@ class ReceivedMessage:
 
 # --- Core functionality (see simple485_remastered/core.py) ---
 
-DEFAULT_TRANSCEIVER_TOGGLE_TIME_US = 100
+DEFAULT_TRANSCEIVER_TOGGLE_TIME_MS = 20
 
 
 class Simple485Remastered:
@@ -123,7 +123,7 @@ class Simple485Remastered:
         interface_baudrate,
         address,
         transmit_mode_pin,
-        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
+        transceiver_toggle_time_ms=DEFAULT_TRANSCEIVER_TOGGLE_TIME_MS,
         log_level=logging.INFO,
     ):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
@@ -136,11 +136,11 @@ class Simple485Remastered:
 
         self._address = address
 
-        self._transceiver_toggle_time_us = transceiver_toggle_time_us
-        if self._transceiver_toggle_time_us <= 0:
+        self._transceiver_toggle_time_ms = transceiver_toggle_time_ms
+        if self._transceiver_toggle_time_ms <= 0:
             raise ValueError(
-                f"Invalid transceiver toggle time: {self._transceiver_toggle_time_us}. "
-                "It must be a positive float representing microseconds."
+                f"Invalid transceiver toggle time: {self._transceiver_toggle_time_ms}. "
+                "It must be a positive float representing milliseconds."
             )
 
         self._transmit_mode_pin = machine.Pin(transmit_mode_pin, machine.Pin.OUT)
@@ -169,11 +169,11 @@ class Simple485Remastered:
 
     def _enable_transmit_mode(self):
         self._transmit_mode_pin.on()
-        time.sleep_us(self._transceiver_toggle_time_us)
+        time.sleep_ms(self._transceiver_toggle_time_ms)
 
     def _disable_transmit_mode(self):
         self._transmit_mode_pin.off()
-        time.sleep_us(self._transceiver_toggle_time_us)
+        time.sleep_us(self._transceiver_toggle_time_ms)
 
     def loop(self):
         self._receive()
@@ -406,7 +406,7 @@ class Node:
         interface_baudrate,
         address,
         transmit_mode_pin,
-        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
+        transceiver_toggle_time_ms=DEFAULT_TRANSCEIVER_TOGGLE_TIME_MS,
         log_level=logging.INFO,
     ):
         self._logger = logging.getLogger(self.__class__.__name__, level=log_level)
@@ -420,7 +420,7 @@ class Node:
             interface_baudrate=interface_baudrate,
             address=address,
             transmit_mode_pin=transmit_mode_pin,
-            transceiver_toggle_time_us=transceiver_toggle_time_us,
+            transceiver_toggle_time_ms=transceiver_toggle_time_ms,
             log_level=log_level,
         )
 
@@ -453,7 +453,7 @@ class Slave(Node):
         interface_baudrate,
         address,
         transmit_mode_pin,
-        transceiver_toggle_time_us=DEFAULT_TRANSCEIVER_TOGGLE_TIME_US,
+        transceiver_toggle_time_ms=DEFAULT_TRANSCEIVER_TOGGLE_TIME_MS,
         log_level=logging.INFO,
     ):
         if not is_valid_slave_address(address):
@@ -467,7 +467,7 @@ class Slave(Node):
             interface_baudrate=interface_baudrate,
             address=address,
             transmit_mode_pin=transmit_mode_pin,
-            transceiver_toggle_time_us=transceiver_toggle_time_us,
+            transceiver_toggle_time_ms=transceiver_toggle_time_ms,
             log_level=log_level,
         )
 
