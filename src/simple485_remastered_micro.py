@@ -2,10 +2,10 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 15:33, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 18:38, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
-import time
+import utime
 import machine
 import ubinascii
 
@@ -63,7 +63,7 @@ def is_valid_slave_address(address):
 
 
 def get_milliseconds():
-    return time.ticks_ms()
+    return utime.ticks_ms()
 
 
 # --- Model definitions (see simple485_remastered/models.py) ---
@@ -168,11 +168,11 @@ class Simple485Remastered:
 
     def _enable_transmit_mode(self):
         self._transmit_mode_pin.on()
-        time.sleep_ms(self._transceiver_toggle_time_ms)
+        utime.sleep_ms(self._transceiver_toggle_time_ms)
 
     def _disable_transmit_mode(self):
         self._transmit_mode_pin.off()
-        time.sleep_us(self._transceiver_toggle_time_ms)
+        utime.sleep_us(self._transceiver_toggle_time_ms)
 
     def loop(self):
         self._receive()
@@ -180,7 +180,7 @@ class Simple485Remastered:
 
         if (
             self._receiver_state != ReceiverState.IDLE
-            and time.ticks_diff(get_milliseconds(), self._receiving_message.timestamp) > PACKET_TIMEOUT_MS
+            and utime.ticks_diff(get_milliseconds(), self._receiving_message.timestamp) > PACKET_TIMEOUT_MS
         ):
             self._logger.warning("Packet timeout, resetting receiver state.")
             self._receiver_state = ReceiverState.IDLE
@@ -352,7 +352,7 @@ class Simple485Remastered:
         if not self._output_messages:
             return False
 
-        if time.ticks_diff(get_milliseconds(), self._last_bus_activity) < LINE_READY_TIME_MS:
+        if utime.ticks_diff(get_milliseconds(), self._last_bus_activity) < LINE_READY_TIME_MS:
             self._logger.debug("Line not ready for transmission, waiting.")
             return False
 
@@ -365,7 +365,7 @@ class Simple485Remastered:
 
             try:
                 while not self._interface.txdone():
-                    time.sleep_us(10)
+                    utime.sleep_us(10)
             except AttributeError:
                 self._logger.warning("Interface does not support txdone. Falling back to using flush with manual timing calculation.")
 
@@ -385,7 +385,7 @@ class Simple485Remastered:
 
                 self._logger.debug(f"Message transmission time: {transmission_time_s} s ({transmission_time_us} us)")
 
-                time.sleep_us(transmission_time_us)
+                utime.sleep_us(transmission_time_us)
         except OSError as e:
             self._logger.exception(e, f"Serial communication error: {e}. Message not sent. Will retry later.")
             return False
