@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 18:38, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 20:30, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import utime
@@ -399,6 +399,9 @@ class Simple485Remastered:
         self._output_messages.pop(0)
         self._logger.info("Message sent successfully, buffer: %s", message_to_send.hex())
         return True
+    
+    def transmit(self):
+        return self._transmit()
 
 
 # --- Node abstract class (see simple485_remastered/node.py) ---
