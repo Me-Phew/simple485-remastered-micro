@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 13:25, simple485-remastered-micro                  -
+#  Last modified 22.08.2025, 15:33, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import time
@@ -139,8 +139,7 @@ class Simple485Remastered:
         self._transceiver_toggle_time_ms = transceiver_toggle_time_ms
         if self._transceiver_toggle_time_ms <= 0:
             raise ValueError(
-                f"Invalid transceiver toggle time: {self._transceiver_toggle_time_ms}. "
-                "It must be a positive float representing milliseconds."
+                f"Invalid transceiver toggle time: {self._transceiver_toggle_time_ms}. It must be a positive float representing milliseconds."
             )
 
         self._transmit_mode_pin = machine.Pin(transmit_mode_pin, machine.Pin.OUT)
@@ -484,8 +483,7 @@ class Slave(Node):
     def _handle_incoming_message(self, message, elapsed_ms=None):
         if message.src_address != MASTER_ADDRESS:
             self._logger.warning(
-                f"Received message from non-master address {message.src_address}. "
-                f"Slave only accepts messages from the master ({MASTER_ADDRESS})."
+                f"Received message from non-master address {message.src_address}. Slave only accepts messages from the master ({MASTER_ADDRESS})."
             )
             return None
 
