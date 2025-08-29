@@ -2,13 +2,12 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 29.08.2025, 19:36, simple485-remastered-micro                 -
+#  Last modified 29.08.2025, 22:32, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
-import utime
 import machine
 import ubinascii
-
+import utime
 from micropython import const  # MicroPython specific optimization for compile time constants
 
 # This port uses https://github.com/Me-Phew/micropython-logging,
