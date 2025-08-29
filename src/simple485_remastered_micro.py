@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 22.08.2025, 20:30, simple485-remastered-micro                  -
+#  Last modified 29.08.2025, 19:30, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
 import utime
@@ -17,7 +17,7 @@ from micropython import const  # MicroPython specific optimization for compile t
 # that uses the same interface as the standard Python logging library.
 import logging
 
-# --- Protocol definitions (see simple485_remastered/protocol.py) ---
+# * -- Protocol definitions (see simple485_remastered/protocol.py) --
 
 
 MAX_MESSAGE_LEN = const(255)
@@ -59,14 +59,14 @@ def is_valid_slave_address(address):
     return is_valid_node_address(address) and address != MASTER_ADDRESS
 
 
-# --- Utility functions (see simple485_remastered/utils.py) ---
+# * -- Utility functions (see simple485_remastered/utils.py) --
 
 
 def get_milliseconds():
     return utime.ticks_ms()
 
 
-# --- Model definitions (see simple485_remastered/models.py) ---
+# * -- Model definitions (see simple485_remastered/models.py) --
 
 
 class ReceivingMessage:
@@ -110,7 +110,7 @@ class ReceivedMessage:
         return self._originating_bus.send_message(self.src_address, message, self.transaction_id)
 
 
-# --- Core functionality (see simple485_remastered/core.py) ---
+# * -- Core functionality (see simple485_remastered/core.py) --
 
 DEFAULT_TRANSCEIVER_TOGGLE_TIME_MS = 20
 
@@ -404,7 +404,7 @@ class Simple485Remastered:
         return self._transmit()
 
 
-# --- Node abstract class (see simple485_remastered/node.py) ---
+# * -- Node abstract class (see simple485_remastered/node.py) --
 
 
 class Node:
@@ -451,7 +451,7 @@ class Node:
         raise NotImplementedError
 
 
-# --- Slave abstract class (see simple485_remastered/slave.py) ---
+# * -- Slave abstract class (see simple485_remastered/slave.py) --
 
 
 class Slave(Node):
