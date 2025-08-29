@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 29.08.2025, 19:30, simple485-remastered-micro                 -
+#  Last modified 29.08.2025, 19:36, simple485-remastered-micro                 -
 # ------------------------------------------------------------------------------
 
 import utime
@@ -367,14 +367,18 @@ class Simple485Remastered:
                 while not self._interface.txdone():
                     utime.sleep_us(10)
             except AttributeError:
-                self._logger.warning("Interface does not support txdone. Falling back to using flush with manual timing calculation.")
+                self._logger.warning(
+                    "Interface does not support txdone. Falling back to using flush with manual timing calculation."
+                )
 
                 safety_margin_factor = 1.1
 
                 try:
                     self._interface.flush()
                 except AttributeError:
-                    self._logger.warning("Interface does not support flush. Increasing safety margin factor for manual timing calculation.")
+                    self._logger.warning(
+                        "Interface does not support flush. Increasing safety margin factor for manual timing calculation."
+                    )
                     safety_margin_factor = 1.2
 
                 transmission_time_s = (
@@ -399,7 +403,7 @@ class Simple485Remastered:
         self._output_messages.pop(0)
         self._logger.info("Message sent successfully, buffer: %s", message_to_send.hex())
         return True
-    
+
     def transmit(self):
         return self._transmit()
 
