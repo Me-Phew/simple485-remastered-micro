@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 29.08.2025, 22:32, simple485-remastered-micro                 -
+#  Last modified 8.09.2025, 19:48, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import machine
@@ -92,9 +92,7 @@ class ReceivedMessage:
 
     def __repr__(self):
         payload_hex = ubinascii.hexlify(self.payload).decode("ascii")
-        return "ReceivedMessage(src={}, dest={}, tid={}, len={}, payload={})".format(
-            self.src_address, self.dest_address, self.transaction_id, self.length, payload_hex
-        )
+        return f"ReceivedMessage(src={self.src_address}, dest={self.dest_address}, tid={self.transaction_id}, len={self.length}, payload={payload_hex})"
 
     def is_broadcast(self):
         return self.dest_address == BROADCAST_ADDRESS
@@ -469,10 +467,9 @@ class Slave(Node):
         log_level=logging.INFO,
     ):
         if not is_valid_slave_address(address):
-            msg = "Invalid address for Slave: {}. Address must be between {} and {}.".format(
-                address, FIRST_NODE_ADDRESS + 1, LAST_NODE_ADDRESS
+            raise ValueError(
+                f"Invalid address for Slave: {address}. Address must be between {FIRST_NODE_ADDRESS + 1} and {LAST_NODE_ADDRESS}."
             )
-            raise ValueError(msg)
 
         super(Slave, self).__init__(
             interface=interface,
