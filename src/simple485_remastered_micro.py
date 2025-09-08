@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 8.09.2025, 19:48, simple485-remastered-micro                  -
+#  Last modified 08.09.2025, 19:48, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import machine
