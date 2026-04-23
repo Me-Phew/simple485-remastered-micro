@@ -169,7 +169,7 @@ class Simple485Remastered:
 
     def _disable_transmit_mode(self):
         self._transmit_mode_pin.off()
-        utime.sleep_us(self._transceiver_toggle_time_ms)
+        utime.sleep_ms(self._transceiver_toggle_time_ms)
 
     def loop(self):
         self._receive()
