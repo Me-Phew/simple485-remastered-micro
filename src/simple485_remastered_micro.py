@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 06.12.2025, 21:10, simple485-remastered-micro                  -
+#  Last modified 23.04.2026, 12:46, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import machine
@@ -217,7 +217,8 @@ class Simple485Remastered:
             text_buffer += bytes([byte])
         text_buffer += ControlSequence.ETX + bytes([crc]) + ControlSequence.EOT + ControlSequence.LF * 2
 
-        self._logger.debug(f"Queuing message, buffer: {text_buffer.hex()}, dest_address: {dst_address}")
+        if self._logger.getLevel() <= logging.DEBUG:
+            self._logger.debug(f"Queuing message, buffer: {text_buffer.hex()}, dest_address: {dst_address}")
         self._output_messages.append(text_buffer)
         return True
 
@@ -340,7 +341,8 @@ class Simple485Remastered:
                 continue
 
             self._last_bus_activity = get_milliseconds()
-            self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state}")
+            if self._logger.getLevel() <= logging.DEBUG:
+                self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state}")
 
             self._process_byte(byte)
 
@@ -349,11 +351,13 @@ class Simple485Remastered:
             return False
 
         if utime.ticks_diff(get_milliseconds(), self._last_bus_activity) < LINE_READY_TIME_MS:
-            self._logger.debug("Line not ready for transmission, waiting.")
+            if self._logger.getLevel() <= logging.DEBUG:
+                self._logger.debug("Line not ready for transmission, waiting.")
             return False
 
         message_to_send = self._output_messages[0]
-        self._logger.debug(f"Attempting to transmit a message, buffer: {message_to_send.hex()}")
+        if self._logger.getLevel() <= logging.DEBUG:
+            self._logger.debug(f"Attempting to transmit a message, buffer: {message_to_send.hex()}")
 
         try:
             self._enable_transmit_mode()
@@ -383,7 +387,8 @@ class Simple485Remastered:
 
                 transmission_time_us = int(transmission_time_s * 1_000_000)
 
-                self._logger.debug(f"Message transmission time: {transmission_time_s} s ({transmission_time_us} us)")
+                if self._logger.getLevel() <= logging.DEBUG:
+                    self._logger.debug(f"Message transmission time: {transmission_time_s} s ({transmission_time_us} us)")
 
                 utime.sleep_us(transmission_time_us)
         except OSError as e:
