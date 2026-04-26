@@ -2,7 +2,7 @@
 # A MicroPython port of the simple485-remastered library for slave devices.
 
 # ------------------------------------------------------------------------------
-#  Last modified 23.04.2026, 12:46, simple485-remastered-micro                  -
+#  Last modified 26.04.2026, 14:37, simple485-remastered-micro                  -
 # ------------------------------------------------------------------------------
 
 import machine
@@ -21,8 +21,10 @@ import logging
 
 MAX_MESSAGE_LEN = const(255)
 LINE_READY_TIME_MS = const(10)
+LONG_MESSAGE_RESPONSE_DELAY_MS = const(500)
+LONG_MESSAGE_RESPONSE_DELAY_THRESHOLD = const(14)
 BITS_PER_BYTE = const(10)
-PACKET_TIMEOUT_MS = const(500)
+INTER_BYTE_TIMEOUT_MS = const(500)
 FIRST_NODE_ADDRESS = const(0)
 MASTER_ADDRESS = const(FIRST_NODE_ADDRESS)
 BROADCAST_ADDRESS = const(255)
@@ -71,6 +73,7 @@ def get_milliseconds():
 class ReceivingMessage:
     def __init__(self, timestamp=None):
         self.timestamp = timestamp
+        self.last_byte_timestamp = timestamp
         self.dst_address = None
         self.src_address = None
         self.transaction_id = None
@@ -143,6 +146,7 @@ class Simple485Remastered:
         self._disable_transmit_mode()
 
         self._last_bus_activity = get_milliseconds()
+        self._next_response_delay_ms = LINE_READY_TIME_MS
         self._receiver_state = ReceiverState.IDLE
         self._receiving_message = None
         self._received_messages = []
@@ -177,9 +181,9 @@ class Simple485Remastered:
 
         if (
             self._receiver_state != ReceiverState.IDLE
-            and utime.ticks_diff(get_milliseconds(), self._receiving_message.timestamp) > PACKET_TIMEOUT_MS
+            and utime.ticks_diff(get_milliseconds(), self._receiving_message.last_byte_timestamp) > INTER_BYTE_TIMEOUT_MS
         ):
-            self._logger.warning("Packet timeout, resetting receiver state.")
+            self._logger.warning("Inter-byte timeout, resetting receiver state.")
             self._receiver_state = ReceiverState.IDLE
             self._receiving_message = None
 
@@ -219,7 +223,13 @@ class Simple485Remastered:
 
         if self._logger.getLevel() <= logging.DEBUG:
             self._logger.debug(f"Queuing message, buffer: {text_buffer.hex()}, dest_address: {dst_address}")
-        self._output_messages.append(text_buffer)
+
+        response_delay_ms = self._next_response_delay_ms
+        if response_delay_ms < LINE_READY_TIME_MS:
+            response_delay_ms = LINE_READY_TIME_MS
+        self._next_response_delay_ms = LINE_READY_TIME_MS
+
+        self._output_messages.append((text_buffer, response_delay_ms))
         return True
 
     def available(self):
@@ -315,6 +325,11 @@ class Simple485Remastered:
                 )
                 
                 if is_for_us:
+                    if self._receiving_message.length > LONG_MESSAGE_RESPONSE_DELAY_THRESHOLD:
+                        self._next_response_delay_ms = LONG_MESSAGE_RESPONSE_DELAY_MS
+                    else:
+                        self._next_response_delay_ms = LINE_READY_TIME_MS
+
                     message = ReceivedMessage(
                     src_address=self._receiving_message.src_address,
                     dest_address=self._receiving_message.dst_address,
@@ -334,10 +349,12 @@ class Simple485Remastered:
             self._receiving_message = None
 
     def _receive(self):
-        while self._interface.any() > 0:
+        pending = self._interface.any()
+        while pending > 0:
             byte = self._interface.read(1)
 
             if byte is None or (byte == ControlSequence.NULL and self._receiver_state == ReceiverState.IDLE):
+                pending = self._interface.any()
                 continue
 
             self._last_bus_activity = get_milliseconds()
@@ -345,20 +362,25 @@ class Simple485Remastered:
                 self._logger.debug(f"Received byte: {byte.hex()} in state {self._receiver_state}")
 
             self._process_byte(byte)
+            if self._receiving_message is not None:
+                self._receiving_message.last_byte_timestamp = self._last_bus_activity
+            pending = self._interface.any()
 
     def _transmit(self):
         if not self._output_messages:
             return False
 
-        if utime.ticks_diff(get_milliseconds(), self._last_bus_activity) < LINE_READY_TIME_MS:
+        message_to_send, response_delay_ms = self._output_messages[0]
+
+        if utime.ticks_diff(get_milliseconds(), self._last_bus_activity) < response_delay_ms:
             if self._logger.getLevel() <= logging.DEBUG:
                 self._logger.debug("Line not ready for transmission, waiting.")
             return False
 
-        message_to_send = self._output_messages[0]
         if self._logger.getLevel() <= logging.DEBUG:
             self._logger.debug(f"Attempting to transmit a message, buffer: {message_to_send.hex()}")
 
+        error_occurred = False
         try:
             self._enable_transmit_mode()
             self._interface.write(message_to_send)
@@ -392,18 +414,20 @@ class Simple485Remastered:
 
                 utime.sleep_us(transmission_time_us)
         except OSError as e:
-            self._logger.exception(e, f"Serial communication error: {e}. Message not sent. Will retry later.")
-            return False
+            self._logger.exception(e, f"Serial communication error: {e}. Message not sent.")
+            error_occurred = True
         except Exception as e:
-            self._logger.exception(e, f"Unexpected error during transmission: {e}. Message not sent. Will retry later.")
-            return False
+            self._logger.exception(e, f"Unexpected error during transmission: {e}. Message not sent.")
+            error_occurred = True
         finally:
             self._disable_transmit_mode()
 
         self._last_bus_activity = get_milliseconds()
         self._output_messages.pop(0)
-        self._logger.info("Message sent successfully, buffer: %s", message_to_send.hex())
-        return True
+
+        if not error_occurred:
+            self._logger.info("Message sent successfully, buffer: %s", message_to_send.hex())
+        return not error_occurred
 
     def transmit(self):
         return self._transmit()
